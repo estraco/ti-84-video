@@ -56,26 +56,26 @@ async function frameToHeader(videoName: string, frameDir: string, size: [number,
     // for (const file of files) {
     const format =
         `palettes:
-    - name: global_palette
-      fixed-entries:
-        - color: {index: 0, r: 255, g: 0, b: 128}
-        - color: {index: 1, r: 255, g: 255, b: 255}
-      images: automatic
+  - name: global_palette
+    fixed-entries:
+      - color: {index: 0, r: 255, g: 0, b: 128}
+      - color: {index: 1, r: 255, g: 255, b: 255}
+    images: automatic
 
 converts:
-    - name: sprites
-      palette: global_palette
-      transparent-color-index: 0
-      images:
-${files.map((file) => `        - ${file}`).join('\n')}
+  - name: sprites
+    palette: global_palette
+    transparent-color-index: 0
+    images:
+${files.map((file) => `      - ${file}`).join('\n')}
 
 outputs:
-    - type: c
-      include-file: ${videoName}.h
-      palettes:
-        - global_palette
-      converts:
-        - sprites`;
+  - type: c
+    include-file: ${videoName}.h
+    palettes:
+      - global_palette
+    converts:
+      - sprites`;
 
     fs.writeFileSync(path.join('frames', videoName, `resized-${size[0]}x${size[1]}`, `${videoName}.yaml`), format);
 
@@ -229,9 +229,24 @@ const height = Math.round((240 / 320) * width);
 
 const fps = 20;
 
-const filename = 'troll';
-// eslint-disable-next-line @typescript-eslint/no-inferrable-types
-const ext: string = '.gif';
+// const filename = 'troll';
+// // eslint-disable-next-line @typescript-eslint/no-inferrable-types
+// const ext: string = '.gif';
+
+const filename = process.argv[2];
+
+if (!filename) {
+    console.error('No filename provided\n' +
+        `Usage: ${process.argv[0]} ${process.argv[1]} <filename>`);
+    process.exit(1);
+}
+
+const ext = path.extname(filename);
+
+if (!fs.existsSync(filename)) {
+    console.error(`File ${filename} does not exist`);
+    process.exit(1);
+}
 
 videoToFrames(filename + ext, fps);
 resizeFrames(filename, width, height);
