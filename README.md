@@ -26,9 +26,14 @@ This is a simple program that converts videos to the format that the TI-84 Plus 
 
 1. Navigate to the `calc/{filename}-{width}x{height}` directory
 2. Build with make
-  a. Windows Powershell: `make "-j$($env:NUMBER_OF_PROCESSORS)"`
-  b. Windows CMD: `make "-j%NUMBER_OF_PROCESSORS%"`
-  c. Linux: `make -j$(nproc)`
+
+```yaml
+Windows Powershell: `make "-j$($env:NUMBER_OF_PROCESSORS)"`
+Windows CMD: `make "-j%NUMBER_OF_PROCESSORS%"`
+Linux: `make -j$(nproc)`
+
+```
+
 3. Copy the .8xp and .8xv files (if generated) to the calculator
 4. Run the program on the calculator
 
