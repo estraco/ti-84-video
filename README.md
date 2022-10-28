@@ -17,7 +17,8 @@ This is a simple program that converts videos to the format that the TI-84 Plus 
 
 ## Usage
 
-1. Run `npm start <filename>` in the repository directory
+1. Run `node build --filename <filename>` in the repository directory
+  a. Run `node build --help` for a list of options
 2. The frames will be extracted and put into the `frames/{filename}` directory
 3. The frames will be converted to the format that the calculator can play and the C source code will be generated in the `calc/{filename}-{width}x{height}` directory
 

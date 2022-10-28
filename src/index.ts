@@ -2,6 +2,84 @@ import cp from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
+function escapeRegExp(str: string) {
+    return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+}
+
+function parseArgs(argv: string[]): {
+    short: {
+        [key: string]: string;
+    },
+    long: {
+        [key: string]: string;
+    }
+} {
+    const short: {
+        [key: string]: string;
+    } = {};
+    const long: {
+        [key: string]: string;
+    } = {};
+
+    for (let i = 0; i < argv.length; i++) {
+        const arg = argv[i];
+        if (arg.startsWith('--')) {
+            const [key, value] = arg.slice(2).split('=');
+
+            if (!value && argv[i + 1] && !argv[i + 1].startsWith('--')) {
+                long[key] = argv[i + 1];
+                i++;
+            } else if (value) {
+                long[key] = value;
+            } else {
+                long[key] = '';
+            }
+        } else if (arg.startsWith('-')) {
+            const [key, value] = arg.slice(1).split('=');
+
+            if (!value && argv[i + 1] && !argv[i + 1].startsWith('-')) {
+                short[key] = argv[i + 1];
+                i++;
+            } else if (value) {
+                short[key] = value;
+            } else {
+                short[key] = '';
+            }
+        }
+    }
+
+    return {
+        short,
+        long
+    };
+}
+
+function parseBooleanArg(arg: string, errmsg: string) {
+    const trueValues = [
+        '',
+        'true',
+        'yes',
+        'y',
+        '1'
+    ];
+    const falseValues = [
+        'false',
+        'no',
+        'n',
+        '0'
+    ];
+
+    if (trueValues.includes(arg)) {
+        return true;
+    }
+
+    if (falseValues.includes(arg)) {
+        return false;
+    }
+
+    throw new Error(errmsg);
+}
+
 function videoToFrames(videoPath: string, fps: number) {
     const videoName = path.basename(videoPath).split('.')[0];
     const framePath = path.join('frames', videoName, 'normal', 'frame_%d.png');
@@ -224,33 +302,83 @@ include $(shell cedev-config --makefile)`;
     }
 }
 
-const width = 64;
-const height = Math.round((240 / 320) * width);
+const args = parseArgs(process.argv.slice(2));
 
-const fps = 20;
+console.log(args);
 
-// const filename = 'troll';
-// // eslint-disable-next-line @typescript-eslint/no-inferrable-types
-// const ext: string = '.gif';
+if (args.long['help'] !== undefined || args.short['h'] !== undefined) {
+    console.log(`Usage: node build [options]
+    
+Options:
+    --input <input> (-f)   - The name of the video file to build [required]
+    --width <width> (-w)         - Width of the video [optional, default: 64]
+    --height <height> (-h)       - Height of the video [optional, default: (240/320) * width]
+    --fps <fps> (-f)             - Frames per second [optional, default: 10]
+    --end-on-last-frame (-e)     - End the video on the last frame [optional, default: file extension is not .gif]
+    --debug (-d)                 - Enable debug mode [optional, default: false]
+    --archive (-a)               - Archive the video [optional, default: false]
+    --compress (-c)              - Compress the video [optional, default: false]
+    --help (-h)                  - Show this help message`);
+    process.exit(0);
+}
 
-const filename = process.argv[2];
+const requiredArgs = [['input', 'i']];
 
-if (!filename) {
-    console.error('No filename provided\n' +
-        `Usage: ${process.argv[0]} ${process.argv[1]} <filename>`);
+for (const arg of requiredArgs) {
+    if (args.long[arg[0]] === undefined && args.short[arg[1]] === undefined) {
+        console.error(`Missing required argument: --${arg[0]} (-${arg[1]})`);
+        process.exit(1);
+    }
+}
+
+const widthArg = args.long['width'] || args.short['w'];
+
+if (widthArg !== undefined && !Number.isInteger(Number(widthArg))) {
+    console.error('Width must be an integer');
     process.exit(1);
 }
 
-const ext = path.extname(filename);
+const heightArg = args.long['height'] || args.short['h'];
 
-if (!fs.existsSync(filename)) {
-    console.error(`File ${filename} does not exist`);
+if (heightArg !== undefined && !Number.isInteger(Number(heightArg))) {
+    console.error('Height must be an integer');
     process.exit(1);
 }
 
-videoToFrames(filename + ext, fps);
-resizeFrames(filename, width, height);
-frameToHeader(filename, path.join('frames', filename, `resized-${width}x${height}`), [width, height], fps, ext !== '.gif', {
-    archive: true,
-    compress: true
-}, false);
+const fpsArg = args.long['fps'] || args.short['f'];
+
+if (fpsArg !== undefined && !Number.isInteger(Number(fpsArg))) {
+    console.error('FPS must be an integer');
+    process.exit(1);
+}
+
+try {
+    const debugArg = args.long['debug'] !== undefined || args.short['d'] !== undefined ? parseBooleanArg(args.long['debug'] || args.short['d'], 'Debug must be a boolean') : false;
+    const archiveArg = args.long['archive'] !== undefined || args.short['a'] !== undefined ? parseBooleanArg(args.long['archive'] || args.short['a'], 'Archive must be a boolean') : false;
+    const compressArg = args.long['compress'] !== undefined || args.short['c'] !== undefined ? parseBooleanArg(args.long['compress'] || args.short['c'], 'Compress must be a boolean') : false;
+    const endOnLastFrameArg = args.long['end-on-last-frame'] !== undefined || args.short['e'] !== undefined ? parseBooleanArg(args.long['end-on-last-frame'] || args.short['e'], 'End on last frame must be a boolean') : false;
+
+    const width = widthArg ? Number(widthArg) : 64;
+    const height = heightArg ? Number(heightArg) : (240 / 320) * width;
+
+    const fps = fpsArg ? Number(fpsArg) : 10;
+
+    const input = args.long['input'] || args.short['i'];
+    const ext = path.extname(input);
+    const filename = input.replace(new RegExp(`(${escapeRegExp(ext)})$`), '');
+
+    const debug = debugArg ?? false;
+    const archive = archiveArg ?? false;
+    const compress = compressArg ?? false;
+    const endOnLastFrame = endOnLastFrameArg ?? ext !== '.gif';
+
+    videoToFrames(input, fps);
+    resizeFrames(filename, width, height);
+    frameToHeader(filename, path.join('frames', filename, `resized-${width}x${height}`), [width, height], fps, endOnLastFrame, {
+        archive,
+        compress
+    }, debug);
+} catch (e) {
+    console.error(e);
+    process.exit(1);
+}
