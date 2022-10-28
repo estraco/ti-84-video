@@ -304,8 +304,6 @@ include $(shell cedev-config --makefile)`;
 
 const args = parseArgs(process.argv.slice(2));
 
-console.log(args);
-
 if (args.long['help'] !== undefined || args.short['h'] !== undefined) {
     console.log(`Usage: node build [options]
     
