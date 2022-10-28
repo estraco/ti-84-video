@@ -1,0 +1,12 @@
+*.gif
+*.mp4
+*.zip
+
+frames/
+calc/
+node_modules/
+build/
+.git/
+.vscode/
+
+package-lock.json
