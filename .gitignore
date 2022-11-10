@@ -4,6 +4,7 @@
 
 frames/
 calc/
+old_calc/
 node_modules/
 build/
 .git/
